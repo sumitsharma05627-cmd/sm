@@ -1,0 +1,6 @@
+{
+  "name": "Sankat Mochan Physiotherapy & Fitness Center",
+  "description": "Professional physiotherapy and fitness rehabilitation center in Gwalior, Madhya Pradesh, led by Dr. Ankit Yagik (MPT, IAP Member). Providing sports injury rehabilitation, cervical, low back pain, and post-injury exercise therapy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
