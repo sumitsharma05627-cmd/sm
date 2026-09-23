@@ -271,6 +271,50 @@ app.post('/api/sync-all', (req, res) => {
   }
 });
 
+// POST Replace an existing gallery image
+app.post('/api/replace-image', (req, res) => {
+  try {
+    const { id, dataUrl, originalFilename } = req.body;
+    if (!id || !dataUrl) {
+      return res.status(400).json({ success: false, error: 'id and dataUrl are required' });
+    }
+
+    const currentGallery = readGalleryManifest();
+    const existingIndex = currentGallery.findIndex((item: any) => item.id === id);
+    if (existingIndex === -1) {
+      return res.status(404).json({ success: false, error: `Image with id "${id}" not found` });
+    }
+
+    const existing = currentGallery[existingIndex];
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 7);
+    const prefix = existing.category ? `sankat-mochan-${existing.category}` : 'sankat-mochan-image';
+    const filename = originalFilename
+      ? `${prefix}-${timestamp}-${randomPart}-${originalFilename.replace(/[^a-zA-Z0-9._-]/g, '_')}`
+      : `${prefix}-${timestamp}-${randomPart}.jpg`;
+
+    let fileUrl = dataUrl;
+    if (dataUrl.startsWith('data:')) {
+      fileUrl = saveBase64ToFile(dataUrl, filename);
+    }
+
+    const updatedRecord = {
+      ...existing,
+      url: fileUrl,
+      filename: path.basename(fileUrl),
+      createdAt: new Date().toISOString(),
+    };
+
+    currentGallery[existingIndex] = updatedRecord;
+    writeGalleryManifest(currentGallery);
+
+    res.json({ success: true, record: updatedRecord });
+  } catch (err: any) {
+    console.error('Replace image error:', err);
+    res.status(500).json({ success: false, error: err?.message || 'Failed to replace image' });
+  }
+});
+
 // POST Delete an image from gallery manifest
 app.post('/api/delete-image', (req, res) => {
   try {

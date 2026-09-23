@@ -1,7 +1,7 @@
 // Persistent Storage Engine for Sankat Mochan Physiotherapy & Fitness Center
 // Dual Persistence:
-// 1. IndexedDB + localStorage on the client for immediate rendering and offline durability.
-// 2. Server filesystem storage (/public/uploads/) via /api/sync-all, /api/upload, and /api/save-slot.
+// 1. Server filesystem storage (/public/uploads/) and database manifests (/public/uploads/gallery.json, slots.json).
+// 2. IndexedDB (SankatMochanClinicDB) + LocalStorage on the client for instant hydration, offline durability, and zero flicker.
 // Every uploaded image is permanently preserved across page refreshes, tab restarts, device switches, and redeployments.
 
 import { GALLERY_PHOTOS } from '../data/clinicData.ts';
@@ -41,7 +41,7 @@ const DB_VERSION = 1;
 const SLOTS_STORE = 'photo_slots';
 const GALLERY_STORE = 'gallery_records';
 const LOCAL_STORAGE_PREFIX = 'sankatmochan_photo_slot_';
-const LOCAL_STORAGE_GALLERY_KEY = 'sankatmochan_custom_gallery_photos';
+const LOCAL_STORAGE_GALLERY_KEY = 'sankatmochan_custom_gallery_photos_v2';
 
 // In-memory cache for synchronous reads during render
 const slotCache = new Map<string, string>();
@@ -108,15 +108,15 @@ function getDb(): Promise<IDBDatabase> {
   });
 }
 
-// Seed permanent existing gallery assets
-function getPermanentDefaultGallery(): PersistentImageRecord[] {
+// Default gallery assets from clinicData
+export function getPermanentDefaultGallery(): PersistentImageRecord[] {
   return GALLERY_PHOTOS.map((photo, idx) => ({
     id: photo.id,
     filename: photo.imageUrl.split('/').pop()?.split('?')[0] || `permanent-${photo.id}.jpg`,
     url: photo.imageUrl,
     title: photo.title,
     category: photo.category,
-    order: idx + 1,
+    order: 1000 + idx,
     permanent: true,
     createdAt: '2026-01-01T00:00:00.000Z',
     description: photo.description,
@@ -139,7 +139,7 @@ async function syncToServer(payload: { slots?: Record<string, string>; gallery?:
   }
 }
 
-// Initial hydration from IndexedDB, LocalStorage, and Server Disk
+// Initial hydration from LocalStorage, IndexedDB, and Server API
 export function initializeStorage(): Promise<void> {
   if (initPromise) return initPromise;
 
@@ -155,37 +155,24 @@ export function initializeStorage(): Promise<void> {
             if (val) slotCache.set(slotKey, val);
           }
         }
-        const legacyGallery = localStorage.getItem(LOCAL_STORAGE_GALLERY_KEY);
-        if (legacyGallery) {
-          const parsed = JSON.parse(legacyGallery);
-          if (Array.isArray(parsed)) {
-            parsed.forEach((item: any, idx: number) => {
-              galleryCache.push({
-                id: item.id || generateUniqueId(item.category || 'clinic'),
-                filename: generateUniqueFilename(item.title, item.category || 'clinic'),
-                url: item.imageUrl || item.url,
-                title: item.title || 'Clinic Photograph',
-                category: item.category || 'clinic',
-                order: idx + 100,
-                permanent: true,
-                createdAt: item.createdAt || new Date().toISOString(),
-                description: item.description,
-                altText: item.altText || item.title
-              });
-            });
+        const cachedGallery = localStorage.getItem(LOCAL_STORAGE_GALLERY_KEY);
+        if (cachedGallery) {
+          const parsed = JSON.parse(cachedGallery);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            galleryCache = parsed;
           }
         }
       }
     } catch {
-      // LocalStorage read error ignored
+      // LocalStorage error ignored
     }
 
-    // 2. Load from IndexedDB (the primary client-side persistent database)
+    // 2. Load from IndexedDB
     try {
       const db = await getDb();
 
       // Load Slots
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         const tx = db.transaction(SLOTS_STORE, 'readonly');
         const store = tx.objectStore(SLOTS_STORE);
         const req = store.getAll();
@@ -198,53 +185,32 @@ export function initializeStorage(): Promise<void> {
           });
           resolve();
         };
-        req.onerror = () => reject(req.error);
+        req.onerror = () => resolve();
       });
 
       // Load Gallery Records
-      await new Promise<void>((resolve, reject) => {
+      await new Promise<void>((resolve) => {
         const tx = db.transaction(GALLERY_STORE, 'readonly');
         const store = tx.objectStore(GALLERY_STORE);
         const req = store.getAll();
         req.onsuccess = () => {
           const records: PersistentImageRecord[] = req.result || [];
-          if (records.length > 0) {
-            // Sort by order
-            records.sort((a, b) => (a.order || 0) - (b.order || 0));
-            // Merge with existing permanent defaults to ensure none are missing
-            const recordIds = new Set(records.map((r) => r.id));
-            const defaultPerm = getPermanentDefaultGallery();
-            const missingDefaults = defaultPerm.filter((d) => !recordIds.has(d.id));
-            galleryCache = [...missingDefaults, ...records];
-          } else {
-            // Seed defaults into IndexedDB
-            const defaultPerm = getPermanentDefaultGallery();
-            galleryCache = [...defaultPerm];
-            try {
-              const saveTx = db.transaction(GALLERY_STORE, 'readwrite');
-              const saveStore = saveTx.objectStore(GALLERY_STORE);
-              defaultPerm.forEach((item) => saveStore.put(item));
-            } catch (seedErr) {
-              console.warn('Could not seed defaults to IndexedDB', seedErr);
-            }
+          if (records.length > 0 && galleryCache.length === 0) {
+            galleryCache = records;
           }
           resolve();
         };
-        req.onerror = () => reject(req.error);
+        req.onerror = () => resolve();
       });
 
       isDbInitialized = true;
       notifyListeners();
-    } catch (err) {
-      console.error('Failed to initialize IndexedDB storage:', err);
-      if (galleryCache.length === 0) {
-        galleryCache = getPermanentDefaultGallery();
-      }
+    } catch {
       isDbInitialized = true;
       notifyListeners();
     }
 
-    // 3. Hydrate and sync with server disk storage
+    // 3. Hydrate and sync with authoritative server disk storage
     try {
       const [slotsRes, galleryRes] = await Promise.all([
         fetch('/api/slots').catch(() => null),
@@ -257,6 +223,9 @@ export function initializeStorage(): Promise<void> {
           for (const [k, v] of Object.entries(slotsData.slots)) {
             if (typeof v === 'string') {
               slotCache.set(k, v);
+              try {
+                localStorage.setItem(LOCAL_STORAGE_PREFIX + k, v);
+              } catch {}
             }
           }
         }
@@ -265,17 +234,32 @@ export function initializeStorage(): Promise<void> {
       if (galleryRes && galleryRes.ok) {
         const galleryData = await galleryRes.json();
         if (Array.isArray(galleryData?.images) && galleryData.images.length > 0) {
-          const serverMap = new Map(galleryData.images.map((img: any) => [img.id, img]));
-          galleryCache = galleryCache.map((local) => (serverMap.get(local.id) as PersistentImageRecord) || local);
-          galleryData.images.forEach((img: any) => {
-            if (!galleryCache.some((g) => g.id === img.id)) {
-              galleryCache.unshift(img);
+          const defaultPerm = getPermanentDefaultGallery();
+          const serverIds = new Set(galleryData.images.map((img: any) => img.id));
+          const missingDefaults = defaultPerm.filter((d) => !serverIds.has(d.id));
+
+          // Full combined list: server images first (newest on top), followed by any missing defaults
+          const merged: PersistentImageRecord[] = [...galleryData.images, ...missingDefaults];
+          galleryCache = merged;
+
+          // Mirror to localStorage
+          try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+              localStorage.setItem(LOCAL_STORAGE_GALLERY_KEY, JSON.stringify(merged));
             }
-          });
+          } catch {}
+
+          // Mirror to IndexedDB
+          try {
+            const db = await getDb();
+            const tx = db.transaction(GALLERY_STORE, 'readwrite');
+            const store = tx.objectStore(GALLERY_STORE);
+            merged.forEach((item) => store.put(item));
+          } catch {}
         }
       }
 
-      // Automatically sync any local uploaded images to the server disk in the background
+      // If local cache had any offline items, sync to server
       const localSlotsObj: Record<string, string> = {};
       slotCache.forEach((v, k) => { localSlotsObj[k] = v; });
       const syncResult = await syncToServer({ slots: localSlotsObj, gallery: galleryCache });
@@ -343,52 +327,14 @@ export const persistentStorage = {
     return null;
   },
 
-  // Save named slot permanently (IndexedDB + Server filesystem)
-  async setSlot(slotId: string, dataUrl: string): Promise<void> {
-    if (!dataUrl) return;
-
-    // 1. Update in-memory cache immediately
-    slotCache.set(slotId, dataUrl);
-
-    if (slotId === 'owner-dr-ankit' || slotId === 'dr-ankit' || slotId === 'dr-ankit-portrait') {
-      slotCache.set('owner-dr-ankit', dataUrl);
-      slotCache.set('dr-ankit', dataUrl);
-      slotCache.set('dr-ankit-portrait', dataUrl);
+  // Save named slot permanently (Server Disk + IndexedDB + LocalStorage)
+  async setSlot(slotId: string, dataUrl: string): Promise<string> {
+    if (!dataUrl) {
+      throw new Error('Image data is missing or empty.');
     }
 
-    notifyListeners();
-
-    // 2. Persist to IndexedDB
-    try {
-      const db = await getDb();
-      await new Promise<void>((resolve, reject) => {
-        const tx = db.transaction(SLOTS_STORE, 'readwrite');
-        const store = tx.objectStore(SLOTS_STORE);
-        store.put({ slotId, dataUrl });
-
-        if (slotId === 'owner-dr-ankit' || slotId === 'dr-ankit' || slotId === 'dr-ankit-portrait') {
-          store.put({ slotId: 'owner-dr-ankit', dataUrl });
-          store.put({ slotId: 'dr-ankit', dataUrl });
-          store.put({ slotId: 'dr-ankit-portrait', dataUrl });
-        }
-
-        tx.oncomplete = () => resolve();
-        tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(new Error('Transaction aborted'));
-      });
-
-      try {
-        if (dataUrl.length < 2000000 && typeof window !== 'undefined' && window.localStorage) {
-          localStorage.setItem(LOCAL_STORAGE_PREFIX + slotId, dataUrl);
-        }
-      } catch {
-        // LocalStorage quota error is safely ignored
-      }
-    } catch (err) {
-      console.error(`Failed to permanently save slot ${slotId} to IndexedDB:`, err);
-    }
-
-    // 3. Persist to Server Disk via API
+    // 1. Upload to server first
+    let permanentUrl = dataUrl;
     try {
       const res = await fetch('/api/save-slot', {
         method: 'POST',
@@ -397,14 +343,59 @@ export const persistentStorage = {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data?.url) {
-          slotCache.set(slotId, data.url);
-          notifyListeners();
+        if (data?.url) permanentUrl = data.url;
+      }
+    } catch (err) {
+      console.warn('Could not save slot to server API immediately:', err);
+    }
+
+    // 2. Update in-memory cache
+    slotCache.set(slotId, permanentUrl);
+
+    if (slotId === 'owner-dr-ankit' || slotId === 'dr-ankit' || slotId === 'dr-ankit-portrait') {
+      slotCache.set('owner-dr-ankit', permanentUrl);
+      slotCache.set('dr-ankit', permanentUrl);
+      slotCache.set('dr-ankit-portrait', permanentUrl);
+    }
+
+    // 3. Persist to IndexedDB
+    try {
+      const db = await getDb();
+      await new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(SLOTS_STORE, 'readwrite');
+        const store = tx.objectStore(SLOTS_STORE);
+        store.put({ slotId, dataUrl: permanentUrl });
+
+        if (slotId === 'owner-dr-ankit' || slotId === 'dr-ankit' || slotId === 'dr-ankit-portrait') {
+          store.put({ slotId: 'owner-dr-ankit', dataUrl: permanentUrl });
+          store.put({ slotId: 'dr-ankit', dataUrl: permanentUrl });
+          store.put({ slotId: 'dr-ankit-portrait', dataUrl: permanentUrl });
+        }
+
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(new Error('Transaction aborted'));
+      });
+    } catch (err) {
+      console.warn(`Failed to mirror slot ${slotId} to IndexedDB:`, err);
+    }
+
+    // 4. Persist to LocalStorage for zero-latency hydration
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(LOCAL_STORAGE_PREFIX + slotId, permanentUrl);
+        if (slotId === 'owner-dr-ankit' || slotId === 'dr-ankit' || slotId === 'dr-ankit-portrait') {
+          localStorage.setItem(LOCAL_STORAGE_PREFIX + 'owner-dr-ankit', permanentUrl);
+          localStorage.setItem(LOCAL_STORAGE_PREFIX + 'dr-ankit', permanentUrl);
+          localStorage.setItem(LOCAL_STORAGE_PREFIX + 'dr-ankit-portrait', permanentUrl);
         }
       }
     } catch {
-      // Server upload will retry during next sync
+      // Ignore
     }
+
+    notifyListeners();
+    return permanentUrl;
   },
 
   // Remove named slot
@@ -429,9 +420,7 @@ export const persistentStorage = {
       }
       try {
         localStorage.removeItem(LOCAL_STORAGE_PREFIX + slotId);
-      } catch {
-        // Ignore
-      }
+      } catch {}
     } catch (err) {
       console.error('Failed to remove slot from IndexedDB:', err);
     }
@@ -452,11 +441,25 @@ export const persistentStorage = {
 
   getAllGalleryImages(): PersistentImageRecord[] {
     if (galleryCache.length === 0) {
+      // Try synchronous localStorage read
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          const cached = localStorage.getItem(LOCAL_STORAGE_GALLERY_KEY);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              galleryCache = parsed;
+              return [...galleryCache];
+            }
+          }
+        } catch {}
+      }
       return getPermanentDefaultGallery();
     }
     return [...galleryCache];
   },
 
+  // Upload Flow: Select image -> Upload to persistent storage -> Save permanent URL -> Save metadata -> Display image
   async addGalleryImage(params: {
     dataUrl: string;
     title: string;
@@ -466,82 +469,70 @@ export const persistentStorage = {
     originalFilename?: string;
   }): Promise<PersistentImageRecord> {
     if (!params.dataUrl) {
-      throw new Error('Image data is missing or empty.');
+      throw new Error('Please select an image file to upload.');
     }
     if (!params.title || !params.title.trim()) {
       throw new Error('Image title is required.');
     }
 
-    const uniqueId = generateUniqueId(params.category);
-    const uniqueFilename = generateUniqueFilename(params.originalFilename, params.category);
+    // Step 1: Upload to persistent server storage FIRST
+    const res = await fetch('/api/upload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        dataUrl: params.dataUrl,
+        title: params.title.trim(),
+        category: params.category || 'clinic',
+        description: params.description?.trim() || 'Authentic clinical photograph at Sankat Mochan Center, Gwalior.',
+        altText: params.altText?.trim() || params.title.trim(),
+        originalFilename: params.originalFilename
+      }),
+    });
 
-    const newRecord: PersistentImageRecord = {
-      id: uniqueId,
-      filename: uniqueFilename,
-      url: params.dataUrl,
-      title: params.title.trim(),
-      category: params.category,
-      order: Date.now(),
-      permanent: true,
-      createdAt: new Date().toISOString(),
-      description: params.description?.trim() || 'Authentic clinical photograph at Sankat Mochan Center, Gwalior.',
-      altText: params.altText?.trim() || params.title.trim()
-    };
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error || 'Persistent storage unavailable. Image could not be saved to server database.');
+    }
 
-    // 1. Save to IndexedDB
+    const data = await res.json();
+    if (!data.success || !data.record) {
+      throw new Error(data?.error || 'Persistent image record could not be confirmed.');
+    }
+
+    const savedRecord: PersistentImageRecord = data.record;
+
+    // Step 2: Save confirmed record to IndexedDB
     try {
       const db = await getDb();
       await new Promise<void>((resolve, reject) => {
         const tx = db.transaction(GALLERY_STORE, 'readwrite');
         const store = tx.objectStore(GALLERY_STORE);
-        store.put(newRecord);
+        store.put(savedRecord);
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(new Error('Transaction aborted'));
       });
-    } catch (err) {
-      console.error('Failed to permanently save image to IndexedDB:', err);
+    } catch (dbErr) {
+      console.warn('Could not mirror confirmed record to IndexedDB:', dbErr);
     }
 
-    // 2. Additive: prepend to galleryCache immediately
-    galleryCache = [newRecord, ...galleryCache];
+    // Step 3: Additive: prepend to galleryCache so it appears at top
+    galleryCache = [savedRecord, ...galleryCache.filter((g) => g.id !== savedRecord.id)];
+
+    // Step 4: Mirror to localStorage
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(LOCAL_STORAGE_GALLERY_KEY, JSON.stringify(galleryCache));
+      }
+    } catch {}
+
+    // Step 5: Notify React components to render the newly persisted photo
     notifyListeners();
 
-    // 3. Save to server filesystem
-    try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dataUrl: params.dataUrl,
-          title: params.title.trim(),
-          category: params.category,
-          description: params.description,
-          altText: params.altText,
-          originalFilename: params.originalFilename
-        }),
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.record?.url) {
-          const idx = galleryCache.findIndex((g) => g.id === newRecord.id);
-          if (idx !== -1) {
-            galleryCache[idx] = {
-              ...newRecord,
-              url: data.record.url,
-              filename: data.record.filename || newRecord.filename
-            };
-            notifyListeners();
-          }
-        }
-      }
-    } catch {
-      // Sync will pick it up
-    }
-
-    return newRecord;
+    return savedRecord;
   },
 
+  // Replace Image: separate explicit action
   async replaceGalleryImage(
     id: string,
     newDataUrl: string,
@@ -551,20 +542,27 @@ export const persistentStorage = {
       throw new Error('Replacement image data is missing.');
     }
 
-    const existingIndex = galleryCache.findIndex((img) => img.id === id);
-    if (existingIndex === -1) {
-      throw new Error(`Image with id "${id}" not found.`);
+    const res = await fetch('/api/replace-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        dataUrl: newDataUrl,
+        originalFilename
+      }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error || 'Failed to replace image on storage server.');
     }
 
-    const existing = galleryCache[existingIndex];
-    const newFilename = generateUniqueFilename(originalFilename, existing.category);
+    const data = await res.json();
+    if (!data.success || !data.record) {
+      throw new Error(data?.error || 'Image replacement could not be confirmed.');
+    }
 
-    const updatedRecord: PersistentImageRecord = {
-      ...existing,
-      filename: newFilename,
-      url: newDataUrl,
-      createdAt: new Date().toISOString()
-    };
+    const updatedRecord: PersistentImageRecord = data.record;
 
     // Save to IndexedDB
     try {
@@ -575,37 +573,43 @@ export const persistentStorage = {
         store.put(updatedRecord);
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(new Error('Transaction aborted'));
       });
     } catch (err) {
-      console.error('Failed to replace image in IndexedDB:', err);
+      console.warn('Failed to mirror updated record in IndexedDB:', err);
     }
 
-    const updated = [...galleryCache];
-    updated[existingIndex] = updatedRecord;
-    galleryCache = updated;
-    notifyListeners();
+    // Update galleryCache
+    const idx = galleryCache.findIndex((g) => g.id === id);
+    if (idx !== -1) {
+      galleryCache[idx] = updatedRecord;
+    } else {
+      galleryCache = [updatedRecord, ...galleryCache];
+    }
 
-    // Also update server disk
     try {
-      fetch('/api/upload', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dataUrl: newDataUrl,
-          title: updatedRecord.title,
-          category: updatedRecord.category,
-          originalFilename: originalFilename
-        }),
-      }).catch(() => {});
-    } catch {
-      // Ignore
-    }
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(LOCAL_STORAGE_GALLERY_KEY, JSON.stringify(galleryCache));
+      }
+    } catch {}
 
+    notifyListeners();
     return updatedRecord;
   },
 
+  // Delete Image: only called when user explicitly confirms deletion
   async deleteGalleryImage(id: string): Promise<void> {
+    const res = await fetch('/api/delete-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData?.error || 'Failed to delete image from persistent server storage.');
+    }
+
+    // Remove from IndexedDB
     try {
       const db = await getDb();
       await new Promise<void>((resolve, reject) => {
@@ -614,24 +618,20 @@ export const persistentStorage = {
         store.delete(id);
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
-        tx.onabort = () => reject(new Error('Transaction aborted'));
       });
     } catch (err) {
-      console.error('Failed to delete image from IndexedDB:', err);
+      console.warn('Failed to delete from IndexedDB:', err);
     }
 
     galleryCache = galleryCache.filter((img) => img.id !== id);
-    notifyListeners();
 
     try {
-      fetch('/api/delete-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id }),
-      }).catch(() => {});
-    } catch {
-      // Ignore
-    }
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem(LOCAL_STORAGE_GALLERY_KEY, JSON.stringify(galleryCache));
+      }
+    } catch {}
+
+    notifyListeners();
   },
 
   // Save / Sync ALL uploaded images explicitly
@@ -669,10 +669,9 @@ export const persistentStorage = {
       console.error('saveAllUploadedImages error:', err);
     }
 
-    // Local IndexedDB is already saved
     return {
       success: true,
-      message: `All images safely preserved in permanent local IndexedDB storage (${totalCount} assets).`,
+      message: `All images safely preserved in persistent storage (${totalCount} assets).`,
       count: totalCount
     };
   }

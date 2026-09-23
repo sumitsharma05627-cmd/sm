@@ -211,10 +211,11 @@ export const GallerySection: React.FC = () => {
   const categories = [
     { id: 'all', label: 'All Photos' },
     { id: 'clinic', label: 'Clinic' },
+    { id: 'physiotherapy', label: 'Physiotherapy' },
+    { id: 'rehab', label: 'Rehabilitation' },
+    { id: 'equipment', label: 'Equipment' },
     { id: 'exterior', label: 'Exterior' },
     { id: 'interior', label: 'Interior' },
-    { id: 'physiotherapy', label: 'Physiotherapy' },
-    { id: 'equipment', label: 'Equipment' },
     { id: 'fitness', label: 'Fitness' },
     { id: 'team', label: 'Team' },
     { id: 'owner', label: 'Owner' },
@@ -224,7 +225,7 @@ export const GallerySection: React.FC = () => {
 
   const filteredPhotos = selectedCategory === 'all'
     ? photos
-    : photos.filter((p) => p.category === selectedCategory);
+    : photos.filter((p) => p.category === selectedCategory || (selectedCategory === 'physiotherapy' && p.category === 'rehab'));
 
   const formatDate = (isoString?: string) => {
     if (!isoString) return 'Permanent Asset';
@@ -658,10 +659,11 @@ export const GallerySection: React.FC = () => {
                     className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-white focus:ring-2 focus:ring-teal-600 focus:outline-none"
                   >
                     <option value="clinic">Clinic</option>
+                    <option value="physiotherapy">Physiotherapy</option>
+                    <option value="rehab">Rehabilitation</option>
+                    <option value="equipment">Equipment</option>
                     <option value="exterior">Exterior</option>
                     <option value="interior">Interior</option>
-                    <option value="physiotherapy">Physiotherapy</option>
-                    <option value="equipment">Equipment</option>
                     <option value="fitness">Fitness</option>
                     <option value="team">Team</option>
                     <option value="owner">Owner</option>

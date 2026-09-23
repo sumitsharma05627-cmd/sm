@@ -9,11 +9,8 @@ export const photoStore = {
     return persistentStorage.getSlot(slotId);
   },
 
-  setSlot(slotId: string, dataUrl: string): void {
-    // Asynchronously persists to IndexedDB while updating synchronous cache immediately
-    persistentStorage.setSlot(slotId, dataUrl).catch((err) => {
-      console.error('Failed to permanently store photo in IndexedDB:', err);
-    });
+  setSlot(slotId: string, dataUrl: string): Promise<string> {
+    return persistentStorage.setSlot(slotId, dataUrl);
   },
 
   getDrAnkitPhoto(): string | null {

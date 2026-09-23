@@ -1,0 +1,74 @@
+[
+  {
+    "id": "img-mudhoyqv-v2blb",
+    "filename": "sankat-mochan-equipment-mudhoyqv-v2blb-photo_b_equipment.jpg",
+    "url": "/uploads/sankat-mochan-equipment-mudhoyqv-v2blb-photo_b_equipment.jpg",
+    "title": "Rehabilitation Gym Equipment Photo B",
+    "category": "equipment",
+    "order": 1790130858727,
+    "permanent": true,
+    "createdAt": "2026-09-23T02:34:18.727Z",
+    "description": "Authentic rehabilitation bay modalities and strength training equipment",
+    "altText": "Rehabilitation Gym Equipment Photo B"
+  },
+  {
+    "id": "img-mudhoro9-55c73",
+    "filename": "sankat-mochan-clinic-mudhpepp-qowio-photo_a_updated.jpg",
+    "url": "/uploads/sankat-mochan-clinic-mudhpepp-qowio-photo_a_updated.jpg",
+    "title": "Clinical Assessment Photo A",
+    "category": "clinic",
+    "order": 1790130849561,
+    "permanent": true,
+    "createdAt": "2026-09-23T02:34:39.422Z",
+    "description": "Authentic physical assessment of spine biomechanics",
+    "altText": "Clinical Assessment Photo A"
+  },
+  {
+    "id": "g-dr-ankit-portrait",
+    "filename": "sankatmochan-physiotherapy-and-fitness-centre-gole-ka-mandir-gwalior-physiotherapists-15v5gevngz.jpg",
+    "url": "/sankatmochan-physiotherapy-and-fitness-centre-gole-ka-mandir-gwalior-physiotherapists-15v5gevngz.jpg",
+    "title": "Dr. Ankit Yagik — Lead Physiotherapist & Founder",
+    "category": "clinic",
+    "order": 1,
+    "permanent": true,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "description": "Lead physiotherapist Dr. Ankit Yagik (MPT, Fellowship, MIAP) at his consultation desk, specializing in sports injury rehabilitation, spine biomechanics, stroke, and joint restoration.",
+    "altText": "Dr. Ankit Yagik seated at consultation desk with official nameplate and credentials at Sankat Mochan Physiotherapy"
+  },
+  {
+    "id": "g-1",
+    "filename": "photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
+    "url": "https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80",
+    "title": "Clinical Treatment & Examination Bay",
+    "category": "clinic",
+    "order": 2,
+    "permanent": true,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "description": "Hygienic, private treatment spaces equipped with electrotherapy and manual therapy tables.",
+    "altText": "Clean modern physiotherapy treatment bed and clinical examination area"
+  },
+  {
+    "id": "g-2",
+    "filename": "photo-1574680096145-d05b474e2155?w=800&auto=format&fit=crop&q=80",
+    "url": "https://images.unsplash.com/photo-1574680096145-d05b474e2155?w=800&auto=format&fit=crop&q=80",
+    "title": "Active Functional Rehabilitation & Drills",
+    "category": "rehab",
+    "order": 3,
+    "permanent": true,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "description": "Targeted exercise therapy using resistance bands, balance trainers, and functional drills.",
+    "altText": "Physiotherapist guiding patient through active movement rehabilitation exercise"
+  },
+  {
+    "id": "g-4",
+    "filename": "photo-1583912267670-6575ad472688?w=800&auto=format&fit=crop&q=80",
+    "url": "https://images.unsplash.com/photo-1583912267670-6575ad472688?w=800&auto=format&fit=crop&q=80",
+    "title": "Cervical & Spine Traction Modalities",
+    "category": "equipment",
+    "order": 4,
+    "permanent": true,
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "description": "Sterilized modalities including TENS, IFT, ultrasound, and cervical-lumbar traction units.",
+    "altText": "Modern physical therapy equipment and assessment modalities"
+  }
+]
