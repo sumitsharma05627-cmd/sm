@@ -3,15 +3,14 @@ import {
   Camera, Info, Maximize2, X, PlusCircle, CheckCircle2, UploadCloud, 
   Trash2, RefreshCw, Settings, Eye, AlertCircle, FileCheck, Layers
 } from 'lucide-react';
-import { imageService } from '../services/imageService.js';
-import { persistentStorage, PersistentImageRecord, ImageCategory } from '../utils/persistentStorage.ts';
+import imageService, { getImages, addImage, replaceImage, deleteImage } from '../services/imageService.js';
+import { PersistentImageRecord, ImageCategory } from '../utils/persistentStorage.ts';
 
 export const GallerySection: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPhoto, setSelectedPhoto] = useState<PersistentImageRecord | null>(null);
-  const [photos, setPhotos] = useState<PersistentImageRecord[]>(() => 
-    imageService.getInitialPhotos() as PersistentImageRecord[]
-  );
+  const [photos, setPhotos] = useState<PersistentImageRecord[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   
   // Views: 'gallery' or 'manager'
   const [activeTab, setActiveTab] = useState<'gallery' | 'manager'>('gallery');
@@ -56,18 +55,32 @@ export const GallerySection: React.FC = () => {
     }
   };
 
-  // Load photos from persistent imageService (localStorage metadata + persistent storage)
+  // Load image library from imageService on component mount
   useEffect(() => {
-    // 1. Subscribe to real-time updates from imageService
-    const unsubscribe = imageService.subscribe((updatedPhotos: any[]) => {
-      setPhotos(updatedPhotos as PersistentImageRecord[]);
-    });
+    // 1. Load image library from imageService
+    try {
+      const initialImages = imageService.getImages();
+      if (initialImages && initialImages.length > 0) {
+        setPhotos(initialImages as PersistentImageRecord[]);
+      }
+    } catch (err) {
+      console.error('Failed to load initial images from imageService:', err);
+    } finally {
+      setIsLoading(false);
+    }
 
-    // 2. Fetch latest authoritative records from persistent storage API
+    // 2. Fetch latest authoritative records from persistent storage
     imageService.fetchPhotos().then((records: any[]) => {
       if (records && records.length > 0) {
         setPhotos(records as PersistentImageRecord[]);
       }
+    }).catch((err) => {
+      console.warn('Failed to fetch remote images from imageService:', err);
+    });
+
+    // 3. Subscribe to real-time updates from imageService
+    const unsubscribe = imageService.subscribe((updatedPhotos: any[]) => {
+      setPhotos(updatedPhotos as PersistentImageRecord[]);
     });
 
     return () => {
@@ -124,7 +137,7 @@ export const GallerySection: React.FC = () => {
 
     try {
       // Real persistent upload into Persistent File Storage + LocalStorage Metadata
-      await imageService.uploadImage({
+      await imageService.addImage({
         dataUrl: uploadDataUrl,
         title: newTitle.trim(),
         category: newCategory,
