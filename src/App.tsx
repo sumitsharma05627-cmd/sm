@@ -15,11 +15,13 @@ import { ContactAndLocation } from './components/ContactAndLocation.tsx';
 import { FaqSection } from './components/FaqSection.tsx';
 import { Footer } from './components/Footer.tsx';
 import { MobileStickyBar } from './components/MobileStickyBar.tsx';
-import { WhatsAppFloatingButton } from './components/WhatsAppFloatingButton.tsx';
+import { ClinicChatbot } from './components/ClinicChatbot.tsx';
+import { ChatbotFloatingButton } from './components/ChatbotFloatingButton.tsx';
 import { AppointmentModal } from './components/AppointmentModal.tsx';
 
 export default function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isChatbotOpen, setIsChatbotOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<string | undefined>(undefined);
 
   const handleOpenAppointment = (serviceTitle?: string) => {
@@ -31,26 +33,40 @@ export default function App() {
     setIsModalOpen(false);
   };
 
+  const handleOpenChatbot = () => {
+    setIsChatbotOpen(true);
+  };
+
+  const handleCloseChatbot = () => {
+    setIsChatbotOpen(false);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Top sticky responsive navbar */}
-      <Navbar onOpenAppointment={handleOpenAppointment} />
+      <Navbar 
+        onOpenAppointment={handleOpenAppointment} 
+        onOpenChatbot={handleOpenChatbot} 
+      />
 
       {/* Main content body */}
       <main className="flex-1">
-        {/* 1. Owners Welcome Spotlight in Front of Website (First as requested) */}
+        {/* 1. Owners Welcome Spotlight in Front of Website */}
         <OwnersWelcomeSection onOpenAppointment={handleOpenAppointment} />
 
         {/* 2. Main Hero Section */}
-        <Hero onOpenAppointment={handleOpenAppointment} />
+        <Hero 
+          onOpenAppointment={handleOpenAppointment} 
+          onOpenChatbot={handleOpenChatbot}
+        />
 
         {/* 3. Fast Contact & Acute Pain Strip */}
-        <EmergencyBanner />
+        <EmergencyBanner onOpenChatbot={handleOpenChatbot} />
 
-        {/* 4. Official Clinical Ad Banner Section (Second Image as Ad Banner) */}
+        {/* 4. Official Clinical Ad Banner Section */}
         <AdBannerSection onOpenAppointment={handleOpenAppointment} />
 
-        {/* 5. About Section (Doctor credentials, playable video player, and philosophy) */}
+        {/* 5. About Section (Doctor credentials, video player, and philosophy) */}
         <AboutSection onOpenAppointment={() => handleOpenAppointment()} />
 
         {/* 6. Services Section (Verified therapies & treatments) */}
@@ -63,7 +79,10 @@ export default function App() {
         <WhyChooseUs />
 
         {/* 9. Reviews Section (Internal verified patient reviews, 0 external redirects) */}
-        <ReviewsSection onOpenAppointment={handleOpenAppointment} />
+        <ReviewsSection 
+          onOpenAppointment={handleOpenAppointment} 
+          onOpenChatbot={handleOpenChatbot}
+        />
 
         {/* 10. Photo Gallery (Clean clinic spaces & authentic photographs) */}
         <GallerySection />
@@ -72,7 +91,10 @@ export default function App() {
         <AppointmentSection prefilledService={selectedService} />
 
         {/* 12. Contact & Location Section (Google Map & Address) */}
-        <ContactAndLocation />
+        <ContactAndLocation 
+          onOpenChatbot={handleOpenChatbot}
+          onOpenAppointment={() => handleOpenAppointment()}
+        />
 
         {/* 13. Frequently Asked Questions */}
         <FaqSection />
@@ -81,11 +103,24 @@ export default function App() {
       {/* Footer */}
       <Footer onOpenAppointment={handleOpenAppointment} />
 
-      {/* Floating WhatsApp Quick Action Button */}
-      <WhatsAppFloatingButton />
+      {/* Built-in Sankat Mochan Assistant Floating Trigger Button */}
+      <ChatbotFloatingButton 
+        onClick={handleOpenChatbot} 
+        isOpen={isChatbotOpen} 
+      />
 
-      {/* Mobile Sticky Bottom Action Bar (Call, WhatsApp, Book) */}
-      <MobileStickyBar onOpenAppointment={() => handleOpenAppointment()} />
+      {/* Built-in Sankat Mochan Assistant (No external AI API) */}
+      <ClinicChatbot 
+        isOpen={isChatbotOpen} 
+        onClose={handleCloseChatbot} 
+        onOpenAppointment={handleOpenAppointment} 
+      />
+
+      {/* Mobile Sticky Bottom Action Bar (Call, Ask Us, Appointment) */}
+      <MobileStickyBar 
+        onOpenAppointment={() => handleOpenAppointment()} 
+        onOpenChatbot={handleOpenChatbot}
+      />
 
       {/* Appointment Popup Modal */}
       <AppointmentModal

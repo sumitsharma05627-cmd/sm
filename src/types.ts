@@ -56,10 +56,24 @@ export interface FaqItem {
   category?: string;
 }
 
+export type GalleryCategory = 
+  | 'clinic' 
+  | 'exterior' 
+  | 'interior' 
+  | 'physiotherapy' 
+  | 'equipment' 
+  | 'fitness' 
+  | 'team' 
+  | 'owner' 
+  | 'gallery' 
+  | 'rehab'
+  | 'other'
+  | (string & {});
+
 export interface GalleryPhoto {
   id: string;
   title: string;
-  category: 'clinic' | 'equipment' | 'rehab' | 'fitness';
+  category: GalleryCategory;
   imageUrl: string;
   altText: string;
   description: string;

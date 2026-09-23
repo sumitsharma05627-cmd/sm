@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, ZoomIn, Upload, X, CheckCircle2, Image as ImageIcon } from 'lucide-react';
-import { photoStore } from '../utils/photoStore.ts';
+import { Camera, ZoomIn, Upload, X, CheckCircle2, Image as ImageIcon, AlertCircle } from 'lucide-react';
+import { persistentStorage } from '../utils/persistentStorage.ts';
 
 interface ClinicImageSlotProps {
   slotKey: string;
@@ -37,10 +37,12 @@ export const ClinicImageSlot: React.FC<ClinicImageSlotProps> = ({
   const displayTitle = title || label || 'Clinic Facility Photograph';
   const displayAlt = altText || alt || displayTitle;
 
-  // Sync with photoStore and defaultSrc
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // Sync with persistentStorage and defaultSrc
   useEffect(() => {
     const updateSrc = () => {
-      const stored = photoStore.getSlot(slotKey);
+      const stored = persistentStorage.getSlot(slotKey);
       if (stored) {
         setCurrentSrc(stored);
         setHasError(false);
@@ -53,24 +55,30 @@ export const ClinicImageSlot: React.FC<ClinicImageSlotProps> = ({
     };
 
     updateSrc();
-    return photoStore.subscribe(updateSrc);
+    return persistentStorage.subscribe(updateSrc);
   }, [slotKey, defaultSrc]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Must be a real image
     if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file.');
       return;
     }
 
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       if (typeof reader.result === 'string') {
-        photoStore.setSlot(slotKey, reader.result);
-        setCurrentSrc(reader.result);
-        setHasError(false);
+        try {
+          await persistentStorage.setSlot(slotKey, reader.result);
+          setCurrentSrc(reader.result);
+          setHasError(false);
+        } catch (err: any) {
+          setUploadError(err?.message || 'Image could not be permanently saved. Please check storage configuration.');
+        }
       }
     };
     reader.readAsDataURL(file);
@@ -78,7 +86,7 @@ export const ClinicImageSlot: React.FC<ClinicImageSlotProps> = ({
 
   const handleRemovePhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
-    photoStore.removeSlot(slotKey);
+    persistentStorage.removeSlot(slotKey).catch(() => {});
     if (defaultSrc) {
       setCurrentSrc(defaultSrc);
       setHasError(false);
@@ -160,6 +168,13 @@ export const ClinicImageSlot: React.FC<ClinicImageSlotProps> = ({
             <p className="text-xs text-slate-500 mt-1 max-w-xs leading-relaxed">
               {subtitle || 'Click to select and display the original clinic photograph file.'}
             </p>
+
+            {uploadError ? (
+              <div className="mt-2 p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] flex items-center gap-1.5 font-medium">
+                <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            ) : null}
 
             <button
               type="button"

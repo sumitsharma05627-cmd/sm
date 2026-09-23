@@ -1,8 +1,12 @@
 import React from 'react';
 import { CLINIC_INFO } from '../data/clinicData.ts';
-import { Phone, MessageCircle, Clock, MapPin, AlertCircle } from 'lucide-react';
+import { Phone, MessageSquare, Clock, MapPin, AlertCircle } from 'lucide-react';
 
-export const EmergencyBanner: React.FC = () => {
+interface EmergencyBannerProps {
+  onOpenChatbot?: () => void;
+}
+
+export const EmergencyBanner: React.FC<EmergencyBannerProps> = ({ onOpenChatbot }) => {
   return (
     <section id="fast-contact-strip" className="bg-teal-900 text-white py-4 px-4 border-y border-teal-800">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-center md:text-left">
@@ -35,16 +39,17 @@ export const EmergencyBanner: React.FC = () => {
             <span>Call: {CLINIC_INFO.contact.primaryPhone}</span>
           </a>
 
-          <a
-            id="emergency-strip-whatsapp-btn"
-            href={`https://wa.me/${CLINIC_INFO.contact.whatsAppNumber}?text=${encodeURIComponent(CLINIC_INFO.contact.defaultWhatsAppMessage)}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>WhatsApp</span>
-          </a>
+          {onOpenChatbot && (
+            <button
+              id="emergency-strip-ask-btn"
+              type="button"
+              onClick={onOpenChatbot}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors cursor-pointer border border-teal-600"
+            >
+              <MessageSquare className="w-3.5 h-3.5" />
+              <span>Ask Assistant</span>
+            </button>
+          )}
 
           <a
             id="emergency-strip-directions-btn"
@@ -58,8 +63,8 @@ export const EmergencyBanner: React.FC = () => {
             <span className="lg:hidden">Directions</span>
           </a>
         </div>
-
       </div>
     </section>
   );
 };
+

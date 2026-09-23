@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
 import { CLINIC_INFO, VERIFIED_REVIEWS } from '../data/clinicData.ts';
 import { 
-  Star, CheckCircle, MessageCircle, ShieldCheck, 
+  Star, CheckCircle, MessageSquare, ShieldCheck, 
   Calendar, Quote, ThumbsUp, Filter, HeartHandshake,
-  Sparkles
+  Sparkles, Phone
 } from 'lucide-react';
 import { ReviewItem } from '../types.ts';
 
 interface ReviewsSectionProps {
   onOpenAppointment?: (service?: string) => void;
+  onOpenChatbot?: () => void;
 }
 
-export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onOpenAppointment }) => {
+export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ 
+  onOpenAppointment,
+  onOpenChatbot 
+}) => {
   const [selectedTag, setSelectedTag] = useState<string>('all');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
 
@@ -250,16 +254,26 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onOpenAppointmen
                 </button>
               )}
 
-              <a
-                id="reviews-cta-whatsapp-btn"
-                href={`https://wa.me/${CLINIC_INFO.contact.whatsAppNumber}?text=${encodeURIComponent(CLINIC_INFO.contact.defaultWhatsAppMessage)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl border border-white/20 transition-all text-sm"
-              >
-                <MessageCircle className="w-4 h-4 text-emerald-400" />
-                <span>Chat on WhatsApp</span>
-              </a>
+              {onOpenChatbot ? (
+                <button
+                  id="reviews-cta-ask-btn"
+                  type="button"
+                  onClick={onOpenChatbot}
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl border border-white/20 transition-all text-sm cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4 text-teal-300" />
+                  <span>Ask Sankat Mochan Assistant</span>
+                </button>
+              ) : (
+                <a
+                  id="reviews-cta-call-btn"
+                  href={`tel:${CLINIC_INFO.contact.primaryPhoneRaw}`}
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3.5 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl border border-white/20 transition-all text-sm"
+                >
+                  <Phone className="w-4 h-4 text-teal-300" />
+                  <span>Call {CLINIC_INFO.contact.primaryPhone}</span>
+                </a>
+              )}
             </div>
           </div>
         </div>

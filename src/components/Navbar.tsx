@@ -5,9 +5,10 @@ import { ClinicLogo } from './ClinicLogo.tsx';
 
 interface NavbarProps {
   onOpenAppointment: (prefilledService?: string) => void;
+  onOpenChatbot?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({ onOpenAppointment }) => {
+export const Navbar: React.FC<NavbarProps> = ({ onOpenAppointment, onOpenChatbot }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -21,13 +22,10 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAppointment }) => {
 
   const navLinks = [
     { label: 'Home', href: '#home' },
-    { label: 'Owners & Directors', href: '#owners-welcome' },
-    { label: 'Specialized Wings', href: '#official-ad-banner' },
-    { label: 'Doctors & Team', href: '#about' },
-    { label: 'Treatments', href: '#services' },
-    { label: 'Fitness Center', href: '#fitness' },
-    { label: 'Why Choose Us', href: '#why-us' },
-    { label: 'Reviews (5.0 ★)', href: '#reviews' },
+    { label: 'About', href: '#about' },
+    { label: 'Services', href: '#services' },
+    { label: 'Reviews', href: '#reviews' },
+    { label: 'Gallery', href: '#gallery' },
     { label: 'Contact', href: '#contact' },
   ];
 
@@ -181,16 +179,18 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenAppointment }) => {
                   <Phone className="w-3.5 h-3.5 text-teal-600" />
                   Call Clinic
                 </a>
-                <a
-                  id="mobile-drawer-whatsapp-btn"
-                  href={`https://wa.me/${CLINIC_INFO.contact.whatsAppNumber}?text=${encodeURIComponent(CLINIC_INFO.contact.defaultWhatsAppMessage)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-emerald-600 text-white text-xs font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
+                <button
+                  id="mobile-drawer-ask-btn"
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    if (onOpenChatbot) onOpenChatbot();
+                  }}
+                  className="flex items-center justify-center gap-1.5 py-2.5 px-3 bg-teal-50 text-teal-900 border border-teal-200 text-xs font-semibold rounded-lg hover:bg-teal-100 transition-colors cursor-pointer"
                 >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  WhatsApp
-                </a>
+                  <MessageCircle className="w-3.5 h-3.5 text-teal-600" />
+                  Ask Us
+                </button>
               </div>
               <button
                 id="mobile-drawer-appointment-btn"

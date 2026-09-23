@@ -111,13 +111,19 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAppointment }) => {
             </h4>
             <ul className="space-y-2 text-xs">
               <li><a href="#home" className="hover:text-teal-300 transition-colors">Home</a></li>
-              <li><a href="#about" className="hover:text-teal-300 transition-colors">About Our Doctors</a></li>
-              <li><a href="#services" className="hover:text-teal-300 transition-colors">Services & Therapies</a></li>
-              <li><a href="#fitness" className="hover:text-teal-300 transition-colors">Fitness Center</a></li>
-              <li><a href="#why-us" className="hover:text-teal-300 transition-colors">Why Choose Us</a></li>
-              <li><a href="#reviews" className="hover:text-teal-300 transition-colors">Patient Reviews</a></li>
-              <li><a href="#gallery" className="hover:text-teal-300 transition-colors">Clinic Facility</a></li>
-              <li><a href="#faqs" className="hover:text-teal-300 transition-colors">Patient FAQs</a></li>
+              <li><a href="#about" className="hover:text-teal-300 transition-colors">About</a></li>
+              <li><a href="#services" className="hover:text-teal-300 transition-colors">Services</a></li>
+              <li><a href="#reviews" className="hover:text-teal-300 transition-colors">Reviews</a></li>
+              <li><a href="#gallery" className="hover:text-teal-300 transition-colors">Gallery</a></li>
+              <li><a href="#contact" className="hover:text-teal-300 transition-colors">Contact</a></li>
+              <li>
+                <button
+                  onClick={() => onOpenAppointment()}
+                  className="hover:text-teal-300 transition-colors text-left cursor-pointer font-semibold text-teal-400"
+                >
+                  Appointment
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -130,43 +136,36 @@ export const Footer: React.FC<FooterProps> = ({ onOpenAppointment }) => {
               <div className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
                 <span>
-                  Ground Floor, Rudra Associates Building, Near Mishra Hospital, Gole Ka Mandir, Gwalior - 474005
+                  Ground Floor, Rudra Associates Building, Near Mishra Hospital, Gole Ka Mandir, Gwalior - 474005, Madhya Pradesh
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-teal-400 shrink-0" />
-                <a href={`tel:${CLINIC_INFO.contact.primaryPhoneRaw}`} className="hover:underline font-semibold text-white">
-                  {CLINIC_INFO.contact.primaryPhone}
-                </a>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4 text-emerald-400 shrink-0" />
-                <a
-                  href={`https://wa.me/${CLINIC_INFO.contact.whatsAppNumber}?text=${encodeURIComponent(CLINIC_INFO.contact.defaultWhatsAppMessage)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:underline text-emerald-400 font-semibold"
-                >
-                  WhatsApp: {CLINIC_INFO.contact.primaryPhone}
-                </a>
+              <div className="flex items-start gap-2">
+                <Phone className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                <div>
+                  <a href={`tel:${CLINIC_INFO.contact.primaryPhoneRaw}`} className="hover:underline font-semibold text-white block">
+                    {CLINIC_INFO.contact.primaryPhone} (Primary)
+                  </a>
+                  <a href={`tel:${CLINIC_INFO.contact.secondaryPhoneRaw}`} className="hover:underline text-slate-400 block text-[11px]">
+                    {CLINIC_INFO.contact.secondaryPhone} (Support)
+                  </a>
+                </div>
               </div>
 
               <div className="flex items-start gap-2 pt-1">
                 <Clock className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold text-white">Hours:</span> Open 24/7
-                  <p className="text-[11px] text-slate-400">Prior call advised for dedicated session slot.</p>
+                  <span className="font-semibold text-white">Hours:</span> Open 24 Hours, Mon–Sun
+                  <p className="text-[11px] text-slate-400">Prior appointment recommended for dedicated care.</p>
                 </div>
               </div>
 
               <div className="pt-2">
                 <button
                   onClick={() => onOpenAppointment()}
-                  className="w-full py-2 px-3 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                  className="w-full py-2.5 px-3 bg-teal-700 hover:bg-teal-600 text-white rounded-lg text-xs font-bold transition-colors cursor-pointer shadow-xs"
                 >
-                  Book Assessment
+                  Book Appointment
                 </button>
               </div>
             </div>

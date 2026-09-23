@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { CLINIC_INFO } from '../data/clinicData.ts';
-import { Star, Phone, MessageCircle, Calendar, MapPin, Award, CheckCircle2, ArrowRight, Activity, ShieldCheck, Home, Camera, ChevronRight, ZoomIn, Upload, X } from 'lucide-react';
+import { Star, Phone, MessageSquare, Calendar, MapPin, Award, CheckCircle2, ArrowRight, Activity, ShieldCheck, Home, Camera, ChevronRight, ZoomIn, Upload, X } from 'lucide-react';
 import { photoStore } from '../utils/photoStore.ts';
 import { ClinicLogo } from './ClinicLogo.tsx';
 
 interface HeroProps {
   onOpenAppointment: (service?: string) => void;
+  onOpenChatbot?: () => void;
 }
 
 const HERO_SLIDES = [
@@ -35,7 +36,7 @@ const HERO_SLIDES = [
   }
 ];
 
-export const Hero: React.FC<HeroProps> = ({ onOpenAppointment }) => {
+export const Hero: React.FC<HeroProps> = ({ onOpenAppointment, onOpenChatbot }) => {
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
   const [isHeroZoomOpen, setIsHeroZoomOpen] = useState(false);
   const [slideImages, setSlideImages] = useState<Record<string, string>>({});
@@ -165,16 +166,17 @@ export const Hero: React.FC<HeroProps> = ({ onOpenAppointment }) => {
                 <span>Call {CLINIC_INFO.contact.primaryPhone}</span>
               </a>
 
-              <a
-                id="hero-whatsapp-cta"
-                href={`https://wa.me/${CLINIC_INFO.contact.whatsAppNumber}?text=${encodeURIComponent(CLINIC_INFO.contact.defaultWhatsAppMessage)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 px-4 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-colors shadow-xs"
-              >
-                <MessageCircle className="w-4 h-4" />
-                <span className="hidden sm:inline">WhatsApp</span>
-              </a>
+              {onOpenChatbot ? (
+                <button
+                  id="hero-ask-us-cta"
+                  type="button"
+                  onClick={onOpenChatbot}
+                  className="inline-flex items-center justify-center gap-2 px-4 py-3.5 bg-teal-50 hover:bg-teal-100 border border-teal-200 text-teal-900 font-semibold rounded-xl text-sm transition-colors shadow-2xs cursor-pointer"
+                >
+                  <MessageSquare className="w-4 h-4 text-teal-700" />
+                  <span>Ask Us</span>
+                </button>
+              ) : null}
             </div>
 
             {/* Location & Visiting Note */}

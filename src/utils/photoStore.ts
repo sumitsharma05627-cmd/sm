@@ -1,59 +1,32 @@
 // Persistent photo store for authentic clinic photos uploaded by the user/owner
 // Zero cartoonization, zero AI enhancement, preserving original bytes.
+// Backed by real persistent IndexedDB via persistentStorage.
 
-type Listener = () => void;
-const listeners = new Set<Listener>();
-
-const STORAGE_PREFIX = 'sankatmochan_photo_slot_';
+import { persistentStorage } from './persistentStorage.ts';
 
 export const photoStore = {
   getSlot(slotId: string): string | null {
-    try {
-      return localStorage.getItem(STORAGE_PREFIX + slotId);
-    } catch {
-      return null;
-    }
+    return persistentStorage.getSlot(slotId);
   },
 
   setSlot(slotId: string, dataUrl: string): void {
-    try {
-      localStorage.setItem(STORAGE_PREFIX + slotId, dataUrl);
-      // Auto-sync related slots for Dr. Ankit
-      if (slotId === 'owner-dr-ankit' || slotId === 'dr-ankit' || slotId === 'dr-ankit-portrait') {
-        localStorage.setItem(STORAGE_PREFIX + 'owner-dr-ankit', dataUrl);
-        localStorage.setItem(STORAGE_PREFIX + 'dr-ankit', dataUrl);
-        localStorage.setItem(STORAGE_PREFIX + 'dr-ankit-portrait', dataUrl);
-      }
-      listeners.forEach((cb) => cb());
-    } catch {
-      console.warn('LocalStorage full or unavailable');
-    }
+    // Asynchronously persists to IndexedDB while updating synchronous cache immediately
+    persistentStorage.setSlot(slotId, dataUrl).catch((err) => {
+      console.error('Failed to permanently store photo in IndexedDB:', err);
+    });
   },
 
   getDrAnkitPhoto(): string | null {
-    const stored = this.getSlot('owner-dr-ankit') || this.getSlot('dr-ankit') || this.getSlot('dr-ankit-portrait');
-    if (stored) return stored;
-    return null;
+    return persistentStorage.getDrAnkitPhoto();
   },
 
   removeSlot(slotId: string): void {
-    try {
-      localStorage.removeItem(STORAGE_PREFIX + slotId);
-      if (slotId === 'owner-dr-ankit' || slotId === 'dr-ankit' || slotId === 'dr-ankit-portrait') {
-        localStorage.removeItem(STORAGE_PREFIX + 'owner-dr-ankit');
-        localStorage.removeItem(STORAGE_PREFIX + 'dr-ankit');
-        localStorage.removeItem(STORAGE_PREFIX + 'dr-ankit-portrait');
-      }
-      listeners.forEach((cb) => cb());
-    } catch {
-      // Ignore
-    }
+    persistentStorage.removeSlot(slotId).catch((err) => {
+      console.error('Failed to remove photo slot:', err);
+    });
   },
 
-  subscribe(listener: Listener): () => void {
-    listeners.add(listener);
-    return () => {
-      listeners.delete(listener);
-    };
+  subscribe(listener: () => void): () => void {
+    return persistentStorage.subscribe(listener);
   }
 };

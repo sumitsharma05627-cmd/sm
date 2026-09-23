@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { CLINIC_INFO } from '../data/clinicData.ts';
 import { 
-  MapPin, Phone, MessageCircle, Clock, Navigation, 
+  MapPin, Phone, MessageSquare, Clock, Navigation, 
   ExternalLink, Mail, Send, CheckCircle2, ShieldCheck 
 } from 'lucide-react';
 
-export const ContactAndLocation: React.FC = () => {
+interface ContactAndLocationProps {
+  onOpenChatbot?: () => void;
+  onOpenAppointment?: () => void;
+}
+
+export const ContactAndLocation: React.FC<ContactAndLocationProps> = ({ 
+  onOpenChatbot, 
+  onOpenAppointment 
+}) => {
   const [quickQuery, setQuickQuery] = useState({
     name: '',
     phone: '',
@@ -16,14 +24,6 @@ export const ContactAndLocation: React.FC = () => {
   const handleQuerySubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setQuerySent(true);
-  };
-
-  const getQuickQueryWhatsAppUrl = () => {
-    const text = `*General Inquiry for Sankat Mochan Physiotherapy:*
-*Name:* ${quickQuery.name}
-*Phone:* ${quickQuery.phone}
-*Message:* ${quickQuery.message}`;
-    return `https://wa.me/${CLINIC_INFO.contact.whatsAppNumber}?text=${encodeURIComponent(text)}`;
   };
 
   return (
@@ -141,14 +141,14 @@ export const ContactAndLocation: React.FC = () => {
               </div>
             </div>
 
-            {/* Operating Timings & WhatsApp Card */}
+            {/* Operating Timings & Direct Helpdesk Card */}
             <div className="bg-slate-50 rounded-2xl border border-slate-200 p-6 space-y-4">
               <div className="flex items-start gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                <div className="w-10 h-10 rounded-xl bg-teal-700 text-white flex items-center justify-center shrink-0 shadow-xs">
                   <Clock className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900">Operating Hours & WhatsApp</h3>
+                  <h3 className="text-base font-bold text-slate-900">Operating Hours & Support</h3>
                   <p className="text-xs text-slate-600 mt-1">
                     <strong>Days:</strong> {CLINIC_INFO.timings.days} <br />
                     <strong>Timings:</strong> {CLINIC_INFO.timings.hours}
@@ -159,16 +159,26 @@ export const ContactAndLocation: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-2">
+              <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                {onOpenChatbot && (
+                  <button
+                    id="contact-ask-assistant-btn"
+                    type="button"
+                    onClick={onOpenChatbot}
+                    className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-teal-50 hover:bg-teal-100 text-teal-900 border border-teal-200 text-xs font-bold rounded-xl shadow-2xs transition-colors cursor-pointer"
+                  >
+                    <MessageSquare className="w-4 h-4 text-teal-700" />
+                    <span>Ask Sankat Mochan Assistant</span>
+                  </button>
+                )}
+
                 <a
-                  id="contact-whatsapp-direct-btn"
-                  href={`https://wa.me/${CLINIC_INFO.contact.whatsAppNumber}?text=${encodeURIComponent(CLINIC_INFO.contact.defaultWhatsAppMessage)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                  id="contact-call-direct-btn"
+                  href={`tel:${CLINIC_INFO.contact.primaryPhoneRaw}`}
+                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 bg-teal-700 hover:bg-teal-800 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
                 >
-                  <MessageCircle className="w-4 h-4" />
-                  <span>Start WhatsApp Chat (+91 73836 82178)</span>
+                  <Phone className="w-4 h-4" />
+                  <span>Call {CLINIC_INFO.contact.primaryPhone}</span>
                 </a>
               </div>
             </div>
@@ -281,23 +291,32 @@ export const ContactAndLocation: React.FC = () => {
                   </button>
                 </form>
               ) : (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2 text-xs text-emerald-900">
+                <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl space-y-2.5 text-xs text-emerald-950">
                   <div className="flex items-center gap-2 font-bold">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600" />
                     <span>Inquiry Recorded!</span>
                   </div>
                   <p>
-                    Thank you {quickQuery.name}. Would you like to transmit this directly to Dr. Ankit on WhatsApp right now?
+                    Thank you {quickQuery.name}. Your inquiry has been received. Our clinic team at Gole Ka Mandir will contact you at {quickQuery.phone}.
                   </p>
-                  <a
-                    href={getQuickQueryWhatsAppUrl()}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg font-bold text-xs hover:bg-emerald-700 transition-colors"
-                  >
-                    <MessageCircle className="w-3.5 h-3.5" />
-                    <span>Forward to Clinic WhatsApp</span>
-                  </a>
+                  <div className="pt-1 flex flex-wrap gap-2">
+                    <a
+                      href={`tel:${CLINIC_INFO.contact.primaryPhoneRaw}`}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-teal-700 text-white rounded-lg font-bold text-xs hover:bg-teal-800 transition-colors"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Call Clinic: {CLINIC_INFO.contact.primaryPhone}</span>
+                    </a>
+                    {onOpenAppointment && (
+                      <button
+                        type="button"
+                        onClick={onOpenAppointment}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-teal-300 text-teal-800 rounded-lg font-bold text-xs hover:bg-teal-50 transition-colors cursor-pointer"
+                      >
+                        <span>Book Dedicated Appointment</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
