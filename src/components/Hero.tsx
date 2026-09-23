@@ -39,7 +39,14 @@ const HERO_SLIDES = [
 export const Hero: React.FC<HeroProps> = ({ onOpenAppointment, onOpenChatbot }) => {
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
   const [isHeroZoomOpen, setIsHeroZoomOpen] = useState(false);
-  const [slideImages, setSlideImages] = useState<Record<string, string>>({});
+  const [slideImages, setSlideImages] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    HERO_SLIDES.forEach((s) => {
+      const stored = photoStore.getSlot(s.slotKey);
+      map[s.id] = stored || s.src;
+    });
+    return map;
+  });
   const [hasError, setHasError] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 

@@ -9,7 +9,7 @@ interface AdBannerSectionProps {
 
 export const AdBannerSection: React.FC<AdBannerSectionProps> = ({ onOpenAppointment }) => {
   const [isZoomOpen, setIsZoomOpen] = useState(false);
-  const [bannerSrc, setBannerSrc] = useState<string>('');
+  const [bannerSrc, setBannerSrc] = useState<string>(() => photoStore.getSlot('official-ad-banner') || '');
   const [hasError, setHasError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 

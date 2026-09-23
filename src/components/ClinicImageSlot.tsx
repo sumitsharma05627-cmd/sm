@@ -29,7 +29,9 @@ export const ClinicImageSlot: React.FC<ClinicImageSlotProps> = ({
   onImageClick,
   showLightboxOnClick = true
 }) => {
-  const [currentSrc, setCurrentSrc] = useState<string | null>(null);
+  const [currentSrc, setCurrentSrc] = useState<string | null>(() => 
+    persistentStorage.getSlot(slotKey) || defaultSrc || null
+  );
   const [hasError, setHasError] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);

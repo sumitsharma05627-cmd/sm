@@ -60,7 +60,14 @@ const OWNER_ASSETS: OwnerAssetItem[] = [
 export const OwnersWelcomeSection: React.FC<OwnersWelcomeSectionProps> = ({ onOpenAppointment }) => {
   const [selectedAssetId, setSelectedAssetId] = useState<string>('dr-ankit-highres');
   const [isZoomOpen, setIsZoomOpen] = useState(false);
-  const [assetImages, setAssetImages] = useState<Record<string, string>>({});
+  const [assetImages, setAssetImages] = useState<Record<string, string>>(() => {
+    const map: Record<string, string> = {};
+    OWNER_ASSETS.forEach((a) => {
+      const stored = photoStore.getSlot(a.slotKey);
+      map[a.id] = stored || a.defaultSrc;
+    });
+    return map;
+  });
   const [assetErrors, setAssetErrors] = useState<Record<string, boolean>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 

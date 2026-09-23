@@ -3,12 +3,15 @@ import {
   Camera, Info, Maximize2, X, PlusCircle, CheckCircle2, UploadCloud, 
   Trash2, RefreshCw, Settings, Eye, AlertCircle, FileCheck, Layers
 } from 'lucide-react';
+import { imageService } from '../services/imageService.js';
 import { persistentStorage, PersistentImageRecord, ImageCategory } from '../utils/persistentStorage.ts';
 
 export const GallerySection: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedPhoto, setSelectedPhoto] = useState<PersistentImageRecord | null>(null);
-  const [photos, setPhotos] = useState<PersistentImageRecord[]>([]);
+  const [photos, setPhotos] = useState<PersistentImageRecord[]>(() => 
+    imageService.getInitialPhotos() as PersistentImageRecord[]
+  );
   
   // Views: 'gallery' or 'manager'
   const [activeTab, setActiveTab] = useState<'gallery' | 'manager'>('gallery');
@@ -42,7 +45,7 @@ export const GallerySection: React.FC = () => {
     setIsSavingAll(true);
     setErrorMessage(null);
     try {
-      const res = await persistentStorage.saveAllUploadedImages();
+      const res = await imageService.saveAllUploadedImages();
       setSuccessMessage(res.message);
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch {
@@ -53,15 +56,25 @@ export const GallerySection: React.FC = () => {
     }
   };
 
-  // Load photos from persistent IndexedDB storage
+  // Load photos from persistent imageService (localStorage metadata + persistent storage)
   useEffect(() => {
-    const updatePhotos = () => {
-      const records = persistentStorage.getAllGalleryImages();
-      setPhotos(records);
-    };
+    // 1. Subscribe to real-time updates from imageService
+    const unsubscribe = imageService.subscribe((updatedPhotos: any[]) => {
+      setPhotos(updatedPhotos as PersistentImageRecord[]);
+    });
 
-    updatePhotos();
-    return persistentStorage.subscribe(updatePhotos);
+    // 2. Fetch latest authoritative records from persistent storage API
+    imageService.fetchPhotos().then((records: any[]) => {
+      if (records && records.length > 0) {
+        setPhotos(records as PersistentImageRecord[]);
+      }
+    });
+
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
   }, []);
 
   // Handle file selection for Add Image
@@ -110,8 +123,8 @@ export const GallerySection: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      // Real persistent upload into IndexedDB
-      await persistentStorage.addGalleryImage({
+      // Real persistent upload into Persistent File Storage + LocalStorage Metadata
+      await imageService.uploadImage({
         dataUrl: uploadDataUrl,
         title: newTitle.trim(),
         category: newCategory,
@@ -169,10 +182,12 @@ export const GallerySection: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      await persistentStorage.replaceGalleryImage(
+      await imageService.replaceImage(
         replacingPhoto.id,
-        replacementDataUrl,
-        replacementFilename
+        {
+          dataUrl: replacementDataUrl,
+          originalFilename: replacementFilename
+        }
       );
 
       setSuccessMessage(`Successfully updated "${replacingPhoto.title}" in persistent storage.`);
@@ -197,7 +212,7 @@ export const GallerySection: React.FC = () => {
     setErrorMessage(null);
 
     try {
-      await persistentStorage.deleteGalleryImage(deletingPhoto.id);
+      await imageService.deleteImage(deletingPhoto.id);
       setSuccessMessage(`Deleted "${deletingPhoto.title}" from storage.`);
       setTimeout(() => setSuccessMessage(null), 3000);
       setDeletingPhoto(null);
